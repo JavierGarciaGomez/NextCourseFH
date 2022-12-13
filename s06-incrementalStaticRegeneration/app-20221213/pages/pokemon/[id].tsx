@@ -4,7 +4,7 @@ import { GetStaticPaths, GetStaticProps } from "next";
 import { pokeApi } from "../../api";
 
 import { Button, Card, Container, Grid, Image, Text } from "@nextui-org/react";
-import { localFavorites } from "../../utils";
+import { getPokemonInfo, localFavorites } from "../../utils";
 import { IPokemon } from "../../interfaces";
 import confetti from "canvas-confetti";
 
@@ -117,18 +117,31 @@ export const getStaticPaths: GetStaticPaths = async (ctx) => {
     paths: pokemonList.map((id) => ({
       params: { id },
     })),
-    fallback: false,
+    // if is not in static, get an 404
+    // fallback: false,
+    // with blocking, it searchs the data
+    fallback: "blocking",
   };
 };
 
 export const getStaticProps: GetStaticProps = async (ctx) => {
-  const id = ctx.params?.id;
-  const { data } = await pokeApi.get<IPokemon>(`/pokemon/${id}`);
+  const id = ctx.params?.id as string;
+  const pokemon = await getPokemonInfo(id);
+
+  if (!pokemon) {
+    return {
+      redirect: {
+        destination: "/",
+        permanent: false,
+      },
+    };
+  }
 
   return {
     props: {
-      pokemon: data,
+      pokemon,
     },
+    revalidate: 86400,
   };
 };
 
